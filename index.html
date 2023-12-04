@@ -1,0 +1,435 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Management System</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 20px;
+    }
+
+    .user-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-around;
+    }
+
+    .user-card {
+      width: 23%;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    .button-container {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .filters {
+      display: flex;
+      margin-bottom: 20px;
+    }
+
+    .pagination {
+      display: flex;
+      margin-bottom: 20px;
+    }
+
+    .team {
+      margin-top: 20px;
+    }
+
+    .user-card img {
+      width: 100%;
+      height: auto;
+      border-radius: 5px;
+    }
+
+    .user-details {
+      margin-top: 10px;
+    }
+
+    .button-container button {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="button-container">
+    <button onclick="getUserById()">Get User by ID</button>
+    <button onclick="createUser()">Create New User</button>
+  </div>
+
+  <div class="filters">
+    <label for="domainFilter">Domain:</label>
+    <select id="domainFilter" onchange="applyUserFilters()">
+      <option value="">All</option>
+      <option value="Sales">Sales</option>
+      <option value="Marketing">Marketing</option>
+      <option value="Management">Management</option>
+      <option value="Business Development">Business Development</option>
+      <option value="UI Designing">UI Designing</option>
+    </select>
+
+    <label for="genderFilter">Gender:</label>
+    <select id="genderFilter" onchange="applyUserFilters()">
+      <option value="">All</option>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+    </select>
+
+    <label for="availabilityFilter">Availability:</label>
+    <select id="availabilityFilter" onchange="applyUserFilters()">
+      <option value="">All</option>
+      <option value="true">Available</option>
+      <option value="false">Not Available</option>
+    </select>
+
+    <label for="searchInput">Search:</label>
+    <input type="text" id="searchInput" oninput="applyUserFilters()" />
+  </div>
+
+  <div id="userList" class="user-container"></div>
+
+  <div class="pagination">
+    <button onclick="changePage(-1)">Previous Page</button>
+    <span id="currentPage">Page 1</span>
+    <button onclick="changePage(1)">Next Page</button>
+  </div>
+  <div class="team">
+    <div id="selectedTeamMembers"></div> <!-- Display selected team members here -->
+    <button onclick="addToTeam()">Add User to Team</button>
+    <button onclick="createTeam()">Create New Team</button>
+    <label for="teamFilter">Team:</label>
+    <select id="teamFilter" onchange="getTeamDetails()">
+      <option value="">Select Team</option>
+    </select>
+    <div id="teamDetails"></div>
+  </div>
+  
+  <script>
+    const apiUrl = 'http://localhost:3002/api/users';
+    const teamApiUrl = 'http://localhost:3002/api/team';
+  
+
+    async function applyUserFilters() {
+      fetchAllUsers();
+    }
+
+    async function changePage(change) {
+      const currentPageElement = document.getElementById('currentPage');
+      const currentPage = parseInt(currentPageElement.innerText.split(' ')[1]);
+
+      const newPage = Math.max(1, currentPage + change);
+      currentPageElement.innerText = `Page ${newPage}`;
+
+      fetchAllUsers();
+    }
+
+    async function createUser() {
+      const firstName = prompt('Enter new first name:');
+      const lastName = prompt('Enter new last name:');
+      const email = prompt('Enter email:');
+      const domain = prompt('Enter domain:');
+      const available = confirm('Is the user available?');
+
+      if (firstName && lastName && email && domain !== null) {
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              first_name: firstName,
+              last_name: lastName,
+              email: email,
+              domain: domain,
+              available: available
+            }),
+          });
+
+          if (response.ok) {
+            alert('User created successfully');
+            fetchAllUsers();
+          } else {
+            console.error('Failed to create user');
+          }
+        } catch (error) {
+          console.error('Error creating user:', error.message);
+        }
+      }
+    }
+
+    async function deleteUser(userId) {
+      const confirmDelete = confirm('Are you sure you want to delete this user?');
+
+      if (confirmDelete) {
+        try {
+          const response = await fetch(`${apiUrl}/${userId}`, {
+            method: 'DELETE',
+          });
+
+          if (response.ok) {
+            alert('User deleted successfully');
+            fetchAllUsers();
+          } else {
+            console.error('Failed to delete user');
+          }
+        } catch (error) {
+          console.error('Error deleting user:', error.message);
+        }
+      }
+    }
+
+    async function updateUser(userId) {
+      const newFirstName = prompt('Enter new first name:');
+      const newLastName = prompt('Enter new last name:');
+      const newEmail = prompt('Enter new email:');
+      const newDomain = prompt('Enter new domain:');
+      const newAvailable = confirm('Is the user available?');
+
+      if (newFirstName && newLastName && newEmail && newDomain !== null) {
+        try {
+          const response = await fetch(`${apiUrl}/${userId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              first_name: newFirstName,
+              last_name: newLastName,
+              email: newEmail,
+              domain: newDomain,
+              available: newAvailable
+            }),
+          });
+
+          if (response.ok) {
+            alert('User updated successfully');
+            fetchAllUsers();
+          } else {
+            console.error('Failed to update user');
+          }
+        } catch (error) {
+          console.error('Error updating user:', error.message);
+        }
+      }
+    }
+
+    async function getUserById() {
+      const userId = prompt('Enter user ID:');
+      if (userId) {
+        try {
+          const response = await fetch(`${apiUrl}/${userId}`);
+          const user = await response.json();
+
+          if (user.error) {
+            alert(user.error);
+          } else {
+            alert(`User found:\nID: ${user.id}\nName: ${user.first_name} ${user.last_name}\nEmail: ${user.email}\nDomain: ${user.domain}\nAvailable: ${user.available}`);
+          }
+        } catch (error) {
+          console.error('Error fetching user by ID:', error.message);
+        }
+      }
+    }
+
+
+
+    async function getUserByIdFromApi(userId) {
+    try {
+      const response = await fetch(`${apiUrl}/${userId}`);
+      const user = await response.json();
+      return user;
+    } catch (error) {
+      console.error('Error fetching user by ID:', error.message);
+      return null;
+    }
+  }
+
+  async function addToTeam() {
+  const teamId = document.getElementById('teamFilter').value;
+
+  if (teamId) {
+    try {
+      const response = await fetch(`http://localhost:3002/api/team/${teamId}`);
+      const team = await response.json();
+
+      // Ensure selectedTeamMembers is an array
+      const selectedTeamMembers = Array.isArray(team.teamMembers) ? team.teamMembers : [];
+
+      // Add the new user to the team
+      selectedTeamMembers.push(...userIdsToAdd);
+
+      // Update the team members on the server
+      await fetch(`http://localhost:3002/api/team/${teamId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ teamMembers: selectedTeamMembers }),
+      });
+
+      // Update the UI to display the new team members
+      updateSelectedTeamMembersUI(selectedTeamMembers);
+
+      alert('User added to the team successfully');
+    } catch (error) {
+      console.error('Error adding user to the team:', error.message);
+    }
+  } else {
+    alert('Please select a team');
+  }
+}
+
+
+  function updateSelectedTeamMembersUI() {
+    const teamMembersElement = document.getElementById('selectedTeamMembers');
+    if (teamMembersElement) {
+      const teamId = selectedTeamMembers.length + 1; // Assuming team ID is based on the count of selected members
+      teamMembersElement.innerHTML = `
+        <div>
+          <h3>Team ID: ${teamId}</h3>
+          <p>Team Members: ${selectedTeamMembers.join(', ')}</p>
+        </div>
+      `;
+    } else {
+      console.error('teamMembersElement not found');
+    }
+  }
+
+  async function createTeam() {
+  try {
+    const response = await fetch(teamApiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        teamMembers: selectedTeamMembers,
+      }),
+    });
+
+    if (response.ok) {
+      alert('Team created successfully');
+      selectedTeamMembers = [];
+      updateSelectedTeamMembersUI();
+      fetchTeams();
+    } else {
+      console.error('Failed to create team');
+    }
+  } catch (error) {
+    console.error('Error creating team:', error.message);
+  }
+}
+
+
+  async function fetchTeams() {
+    const teamFilterElement = document.getElementById('teamFilter');
+    teamFilterElement.innerHTML = '<option value="">Select Team</option>';
+
+    try {
+      const response = await fetch(teamApiUrl);
+      const teams = await response.json();
+
+      teams.forEach(team => {
+        const option = document.createElement('option');
+        option.value = team.id;
+        option.innerText = `Team ${team.id}`;
+        teamFilterElement.appendChild(option);
+      });
+    } catch (error) {
+      console.error('Error fetching teams:', error.message);
+    }
+  }
+
+  async function getTeamDetails() {
+    const teamId = document.getElementById('teamFilter').value;
+    if (teamId) {
+      try {
+        const response = await fetch(`${teamApiUrl}/${teamId}`);
+        const team = await response.json();
+
+        const teamDetailsElement = document.getElementById('teamDetails');
+        teamDetailsElement.innerHTML = `
+          <h3>Team Details</h3>
+          <p>Team ID: ${team.id}</p>
+          <p>Team Members: ${team.teamMembers.join(', ')}</p>
+        `;
+      } catch (error) {
+        console.error('Error fetching team details:', error.message);
+      }
+    }
+  }
+
+    async function fetchAllUsers() {
+      try {
+        const domainFilter = document.getElementById('domainFilter').value.toLowerCase();
+        const genderFilter = document.getElementById('genderFilter').value.toLowerCase();
+        const availabilityFilter = document.getElementById('availabilityFilter').value.toLowerCase();
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+        const page = parseInt(document.getElementById('currentPage').innerText.split(' ')[1]);
+
+        const filters = [];
+        if (domainFilter) filters.push(`domain=${domainFilter}`);
+        if (genderFilter) filters.push(`gender=${genderFilter}`);
+        if (availabilityFilter) filters.push(`availability=${availabilityFilter}`);
+        if (searchTerm) filters.push(`search=${searchTerm}`);
+
+        const filtersQueryString = filters.join('&');
+        const url = `${apiUrl}?${filtersQueryString}&page=${page}`;
+
+        const response = await fetch(url);
+        const { data: users } = await response.json();
+
+        const userListElement = document.getElementById('userList');
+        userListElement.innerHTML = '';
+
+        users.forEach(user => {
+    const userElement = document.createElement('div');
+    userElement.className = 'user-card';
+    userElement.innerHTML = `
+      <img src="${user.avatar}" alt="${user.first_name} ${user.last_name}" />
+      <div class="user-details">
+        <h3>${user.first_name} ${user.last_name}</h3>
+        <p>Email: ${user.email}</p>
+        <p>Gender: ${user.gender}</p>
+        <p>Availability: ${user.available ? 'Available' : 'Not Available'}</p>
+        <p>Domain: ${user.domain}</p>
+      </div>
+      <div class="button-container">
+        <button onclick="updateUser(${user.id})">Update Data</button>
+        <button onclick="deleteUser(${user.id})">Delete Data</button>
+        <button onclick="addToTeam(${user.id})">Add to Team</button>
+      </div>
+    `;
+    userListElement.appendChild(userElement);
+  });
+      } catch (error) {
+        console.error('Error fetching users:', error.message);
+      }
+    }
+
+
+    // Fetch and display users when the page loads
+    fetchAllUsers();
+  </script>
+
+</body>
+
+</html>
